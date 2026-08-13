@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import express from "express";
 import { connectDB, getDbReadyState } from "./config/db";
 import authRoutes from "./routes/authRoutes";
+import clubRoutes from "./routes/clubRoutes";
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/clubs", clubRoutes);
 
 async function start() {
   try {
