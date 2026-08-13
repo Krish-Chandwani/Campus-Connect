@@ -2,6 +2,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import { connectDB, getDbReadyState } from "./config/db";
+import authRoutes from "./routes/authRoutes";
 
 dotenv.config();
 
@@ -22,6 +23,8 @@ app.get("/api/health", (_req, res) => {
     database: getDbReadyState(),
   });
 });
+
+app.use("/api/auth", authRoutes);
 
 async function start() {
   try {

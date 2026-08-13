@@ -15,6 +15,11 @@ export async function connectDB(uri: string): Promise<void> {
 }
 
 export function getDbReadyState(): string {
-  const states = ["disconnected", "connected", "connecting", "disconnecting"] as const;
+  const states: Record<number, string> = {
+    0: "disconnected",
+    1: "connected",
+    2: "connecting",
+    3: "disconnecting",
+  };
   return states[mongoose.connection.readyState] ?? "unknown";
 }
