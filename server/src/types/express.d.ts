@@ -1,4 +1,5 @@
 import type { IClub } from "../models/Club";
+import type { IEvent } from "../models/Event";
 import type { IUser } from "../models/User";
 
 declare global {
@@ -6,6 +7,7 @@ declare global {
     interface Request {
       user?: IUser;
       club?: IClub;
+      event?: IEvent;
     }
   }
 }
