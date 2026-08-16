@@ -5,6 +5,7 @@ import { connectDB, getDbReadyState } from "./config/db";
 import authRoutes from "./routes/authRoutes";
 import clubRoutes from "./routes/clubRoutes";
 import eventRoutes from "./routes/eventRoutes";
+import userRoutes from "./routes/userRoutes";
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/clubs", clubRoutes);
 app.use("/api/events", eventRoutes);
+app.use("/api/users", userRoutes);
 
 async function start() {
   try {
