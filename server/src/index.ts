@@ -2,6 +2,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import { connectDB, getDbReadyState } from "./config/db";
+import announcementRoutes from "./routes/announcementRoutes";
 import authRoutes from "./routes/authRoutes";
 import clubRoutes from "./routes/clubRoutes";
 import eventRoutes from "./routes/eventRoutes";
@@ -31,6 +32,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/clubs", clubRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/announcements", announcementRoutes);
 
 async function start() {
   try {
