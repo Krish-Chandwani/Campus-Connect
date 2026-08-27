@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Club, toPublicClub } from "../models/Club";
+import { User } from "../models/User";
 
 function parseClubId(id: string | undefined) {
   if (!id || !mongoose.isValidObjectId(id)) {
@@ -57,14 +58,13 @@ export async function createClub(req: Request, res: Response) {
       return res.status(409).json({ message: "A club with this name exists" });
     }
 
-    const userId = req.user!.id;
     const club = await Club.create({
       name,
       description,
       logoUrl,
-      createdBy: userId,
-      organizerIds: [userId],
-      memberIds: [userId],
+      createdBy: req.user!.id,
+      organizerIds: [],
+      memberIds: [],
     });
 
     return res.status(201).json({ club: toPublicClub(club) });
@@ -178,5 +178,86 @@ export async function leaveClub(req: Request, res: Response) {
   } catch (error) {
     console.error("Leave club failed:", error);
     return res.status(500).json({ message: "Could not leave club" });
+  }
+}
+
+export async function addClubOrganizer(req: Request, res: Response) {
+  try {
+    const club = req.club!;
+    const email = req.body.email
+      ? String(req.body.email).trim().toLowerCase()
+      : "";
+    const userIdRaw = req.body.userId ? String(req.body.userId).trim() : "";
+
+    let user = null;
+    if (email) {
+      user = await User.findOne({ email });
+    } else if (userIdRaw && mongoose.isValidObjectId(userIdRaw)) {
+      user = await User.findById(userIdRaw);
+    } else {
+      return res
+        .status(400)
+        .json({ message: "Provide organizer email or userId" });
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const alreadyOrganizer = club.organizerIds.some((id) => id.equals(user.id));
+    if (alreadyOrganizer) {
+      return res
+        .status(409)
+        .json({ message: "User is already an organizer of this club" });
+    }
+
+    club.organizerIds.push(user.id);
+    if (!club.memberIds.some((id) => id.equals(user.id))) {
+      club.memberIds.push(user.id);
+    }
+    await club.save();
+
+    if (user.role === "student") {
+      user.role = "organizer";
+      await user.save();
+    }
+
+    return res.json({
+      club: toPublicClub(club),
+      organizer: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("Add club organizer failed:", error);
+    return res.status(500).json({ message: "Could not add club organizer" });
+  }
+}
+
+export async function removeClubOrganizer(req: Request, res: Response) {
+  try {
+    const club = req.club!;
+    const userId = req.params.userId;
+    if (!userId || !mongoose.isValidObjectId(userId)) {
+      return res.status(400).json({ message: "Invalid user id" });
+    }
+
+    const isOrganizer = club.organizerIds.some((id) => id.equals(userId));
+    if (!isOrganizer) {
+      return res
+        .status(404)
+        .json({ message: "User is not an organizer of this club" });
+    }
+
+    club.organizerIds = club.organizerIds.filter((id) => !id.equals(userId));
+    await club.save();
+
+    return res.json({ club: toPublicClub(club) });
+  } catch (error) {
+    console.error("Remove club organizer failed:", error);
+    return res.status(500).json({ message: "Could not remove club organizer" });
   }
 }

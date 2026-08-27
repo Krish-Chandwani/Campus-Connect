@@ -17,6 +17,11 @@ export default function Navbar({ variant = "solid" }: NavbarProps) {
   const dispatch = useAppDispatch();
   const { token, user } = useAppSelector((state) => state.auth);
 
+  const navLinks =
+    user?.role === "admin"
+      ? [...links, { to: "/admin", label: "Admin" }]
+      : links;
+
   const headerClass =
     variant === "frost"
       ? "absolute inset-x-0 top-0 z-20 flex h-[4.25rem] items-center justify-between px-4 text-white sm:px-6 bg-black/20 backdrop-blur-md border-b border-white/15"
@@ -35,7 +40,7 @@ export default function Navbar({ variant = "solid" }: NavbarProps) {
 
       <nav aria-label="Main">
         <ul className="flex items-center gap-3 sm:gap-5 list-none m-0 p-0">
-          {links.map((link) => (
+          {navLinks.map((link) => (
             <li key={link.to}>
               <NavLink to={link.to} className={linkClass}>
                 {link.label}

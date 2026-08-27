@@ -178,7 +178,7 @@ export async function createEvent(req: Request, res: Response) {
       startAt,
       endAt,
       coverImage,
-      status: "draft",
+      status: "published",
       checkInToken: crypto.randomBytes(32).toString("hex"),
       createdBy: req.user!.id,
     });

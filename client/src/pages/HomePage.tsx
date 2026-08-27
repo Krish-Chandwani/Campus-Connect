@@ -135,34 +135,41 @@ export default function HomePage() {
                 return (
                   <li
                     key={event.id}
-                    className="grid grid-cols-[5.5rem_1fr] gap-4 border-t border-line px-4 py-4 first:border-t-0 sm:grid-cols-[6.5rem_1fr_auto] sm:items-center"
+                    className="border-t border-line first:border-t-0"
                   >
-                    <div className="pt-0.5">
-                      <p className="m-0 font-display text-lg font-bold tabular-nums text-ink">
-                        {when.time}
-                      </p>
-                      <p className="m-0 text-xs text-muted">
-                        {when.month} {when.day}
-                      </p>
-                    </div>
-
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="m-0 text-[1.05rem] font-semibold text-ink">
-                          {event.title}
-                        </h3>
-                        {live ? (
-                          <span className="rounded-md bg-accent-soft px-2 py-0.5 text-xs font-bold text-accent">
-                            {liveLabel(event.startAt, event.endAt)}
-                          </span>
-                        ) : null}
+                    <Link
+                      to={`/events/${event.id}`}
+                      className="grid grid-cols-[5.5rem_1fr] gap-4 px-4 py-4 text-ink no-underline hover:bg-brand-soft/40 sm:grid-cols-[6.5rem_1fr_auto] sm:items-center"
+                    >
+                      <div className="pt-0.5">
+                        <p className="m-0 font-display text-lg font-bold tabular-nums text-ink">
+                          {when.time}
+                        </p>
+                        <p className="m-0 text-xs text-muted">
+                          {when.month} {when.day}
+                        </p>
                       </div>
-                      <p className="mt-1 mb-0 text-sm text-muted">{event.venue}</p>
-                    </div>
 
-                    <p className="col-start-2 m-0 text-sm text-muted sm:col-start-auto sm:text-right">
-                      {event.venue}
-                    </p>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="m-0 text-[1.05rem] font-semibold text-ink">
+                            {event.title}
+                          </h3>
+                          {live ? (
+                            <span className="rounded-md bg-accent-soft px-2 py-0.5 text-xs font-bold text-accent">
+                              {liveLabel(event.startAt, event.endAt)}
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="mt-1 mb-0 text-sm text-muted">
+                          {event.venue}
+                        </p>
+                      </div>
+
+                      <span className="col-start-2 text-sm font-semibold text-brand sm:col-start-auto sm:text-right">
+                        View
+                      </span>
+                    </Link>
                   </li>
                 );
               })}

@@ -37,7 +37,7 @@ const eventSchema = new Schema<IEvent>(
     status: {
       type: String,
       enum: EVENT_STATUSES,
-      default: "draft",
+      default: "published",
       index: true,
     },
     checkInToken: { type: String, required: true, select: false },
