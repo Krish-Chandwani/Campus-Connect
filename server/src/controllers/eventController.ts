@@ -47,7 +47,10 @@ export async function listEvents(req: Request, res: Response) {
 
     const statusQuery = req.query.status ? String(req.query.status) : undefined;
     const canSeeDrafts =
-      req.user?.role === "admin" || req.user?.role === "organizer";
+      req.user?.role === "admin" ||
+      Boolean(
+        await Club.findOne({ organizerIds: req.user!.id }).select("_id").lean()
+      );
 
     if (statusQuery) {
       if (!isEventStatus(statusQuery)) {

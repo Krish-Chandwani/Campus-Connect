@@ -34,8 +34,8 @@ function AdminDashboardContent() {
             Admin
           </h1>
           <p className="m-0 text-muted">
-            Create clubs and assign organizers. Organizers then manage their
-            clubs and events.
+            Create clubs and assign organizers to a specific club. Organizers
+            only manage the clubs they are assigned to.
           </p>
         </header>
 
@@ -272,16 +272,45 @@ function ClubsPanel() {
 function UsersPanel() {
   const [search, setSearch] = useState("");
   const [submitted, setSubmitted] = useState("");
+  const [assignForUserId, setAssignForUserId] = useState<string | null>(null);
+  const [selectedClubId, setSelectedClubId] = useState("");
+
   const { data, isLoading, isError } = useListUsersQuery({
     search: submitted || undefined,
   });
+  const { data: clubsData } = useListClubsQuery();
   const [updateRole, updateState] = useUpdateUserRoleMutation();
+  const [addOrganizer, addState] = useAddClubOrganizerMutation();
 
   const users = data?.users ?? [];
+  const clubs = clubsData?.clubs ?? [];
 
   async function setRole(userId: string, role: UserRole) {
     try {
       await updateRole({ userId, role }).unwrap();
+    } catch {
+      // shown below
+    }
+  }
+
+  function openAssign(userId: string) {
+    setAssignForUserId(userId);
+    setSelectedClubId(clubs[0]?.id ?? "");
+  }
+
+  function closeAssign() {
+    setAssignForUserId(null);
+    setSelectedClubId("");
+  }
+
+  async function confirmAssign() {
+    if (!assignForUserId || !selectedClubId) return;
+    try {
+      await addOrganizer({
+        clubId: selectedClubId,
+        userId: assignForUserId,
+      }).unwrap();
+      closeAssign();
     } catch {
       // shown below
     }
@@ -316,52 +345,102 @@ function UsersPanel() {
         <p className="text-muted">No users found.</p>
       ) : (
         <ul className="m-0 list-none overflow-hidden rounded-[12px] border border-line bg-surface p-0">
-          {users.map((user) => (
-            <li
-              key={user.id}
-              className="flex flex-col gap-3 border-t border-line px-4 py-4 first:border-t-0 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div>
-                <p className="m-0 font-semibold">{user.name}</p>
-                <p className="m-0 text-sm text-muted">{user.email}</p>
-                <p className="mt-1 mb-0 text-xs font-bold uppercase tracking-wide text-brand">
-                  {user.role}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className={btnOutline}
-                  disabled={updateState.isLoading || user.role === "student"}
-                  onClick={() => void setRole(user.id, "student")}
-                >
-                  Make student
-                </button>
-                <button
-                  type="button"
-                  className={btnOutline}
-                  disabled={updateState.isLoading || user.role === "organizer"}
-                  onClick={() => void setRole(user.id, "organizer")}
-                >
-                  Make organizer
-                </button>
-                <button
-                  type="button"
-                  className={btnPrimary}
-                  disabled={updateState.isLoading || user.role === "admin"}
-                  onClick={() => void setRole(user.id, "admin")}
-                >
-                  Make admin
-                </button>
-              </div>
-            </li>
-          ))}
+          {users.map((user) => {
+            const isAssigning = assignForUserId === user.id;
+            return (
+              <li
+                key={user.id}
+                className="border-t border-line px-4 py-4 first:border-t-0"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="m-0 font-semibold">{user.name}</p>
+                    <p className="m-0 text-sm text-muted">{user.email}</p>
+                    <p className="mt-1 mb-0 text-xs font-bold uppercase tracking-wide text-brand">
+                      {user.role}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className={btnPrimary}
+                      disabled={addState.isLoading || clubs.length === 0}
+                      onClick={() => openAssign(user.id)}
+                    >
+                      Assign as organiser
+                    </button>
+                    <button
+                      type="button"
+                      className={btnOutline}
+                      disabled={updateState.isLoading || user.role === "student"}
+                      onClick={() => void setRole(user.id, "student")}
+                    >
+                      Make student
+                    </button>
+                    <button
+                      type="button"
+                      className={btnOutline}
+                      disabled={updateState.isLoading || user.role === "admin"}
+                      onClick={() => void setRole(user.id, "admin")}
+                    >
+                      Make admin
+                    </button>
+                  </div>
+                </div>
+
+                {isAssigning ? (
+                  <div className="mt-4 rounded-[10px] border border-line bg-bg p-4">
+                    <p className="m-0 mb-3 text-sm font-semibold text-ink">
+                      Which club should {user.name} organise?
+                    </p>
+                    {clubs.length === 0 ? (
+                      <p className="m-0 text-sm text-muted">
+                        Create a club first in the Clubs tab.
+                      </p>
+                    ) : (
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                        <select
+                          className={inputClass}
+                          value={selectedClubId}
+                          onChange={(e) => setSelectedClubId(e.target.value)}
+                        >
+                          {clubs.map((club) => (
+                            <option key={club.id} value={club.id}>
+                              {club.name}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          className={btnPrimary}
+                          disabled={!selectedClubId || addState.isLoading}
+                          onClick={() => void confirmAssign()}
+                        >
+                          {addState.isLoading ? "Assigning…" : "Confirm"}
+                        </button>
+                        <button
+                          type="button"
+                          className={btnOutline}
+                          onClick={closeAssign}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       )}
 
-      {updateState.error ? (
+      {updateState.error || addState.error ? (
         <p className="mt-4 text-sm text-danger" role="alert">
-          {getErrorMessage(updateState.error, "Could not update role")}
+          {getErrorMessage(
+            updateState.error || addState.error,
+            "Could not update user"
+          )}
         </p>
       ) : null}
     </section>

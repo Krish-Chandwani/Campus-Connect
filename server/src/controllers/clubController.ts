@@ -217,11 +217,6 @@ export async function addClubOrganizer(req: Request, res: Response) {
     }
     await club.save();
 
-    if (user.role === "student") {
-      user.role = "organizer";
-      await user.save();
-    }
-
     return res.json({
       club: toPublicClub(club),
       organizer: {

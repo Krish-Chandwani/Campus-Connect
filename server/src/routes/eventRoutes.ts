@@ -16,7 +16,7 @@ import {
   createRsvp,
   listEventAttendees,
 } from "../controllers/rsvpController";
-import { requireAuth, requireRole } from "../middleware/auth";
+import { requireAuth } from "../middleware/auth";
 import { requireEventOrganizer } from "../middleware/event";
 
 const router = Router();
@@ -24,7 +24,7 @@ const router = Router();
 router.use(requireAuth);
 
 router.get("/", listEvents);
-router.post("/", requireRole("organizer", "admin"), createEvent);
+router.post("/", createEvent);
 
 router.post("/:id/rsvp", createRsvp);
 router.delete("/:id/rsvp", cancelRsvp);
