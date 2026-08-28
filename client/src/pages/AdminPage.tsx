@@ -8,6 +8,8 @@ import {
   useDeleteClubMutation,
   useListClubsQuery,
   useRemoveClubOrganizerMutation,
+  useUpdateClubMutation,
+  type ClubItem,
 } from "../features/clubs/clubsApi";
 import {
   useListUsersQuery,
@@ -34,8 +36,8 @@ function AdminDashboardContent() {
             Admin
           </h1>
           <p className="m-0 text-muted">
-            Create clubs and assign organizers to a specific club. Organizers
-            only manage the clubs they are assigned to.
+            Create and edit clubs, then assign organizers to a specific club.
+            Organizers only manage the clubs they are assigned to.
           </p>
         </header>
 
@@ -66,12 +68,18 @@ function ClubsPanel() {
   const { data, isLoading, isError } = useListClubsQuery();
   const { data: usersData } = useListUsersQuery();
   const [createClub, createState] = useCreateClubMutation();
+  const [updateClub, updateState] = useUpdateClubMutation();
   const [deleteClub, deleteState] = useDeleteClubMutation();
   const [addOrganizer, addState] = useAddClubOrganizerMutation();
   const [removeOrganizer, removeState] = useRemoveClubOrganizerMutation();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [editingClubId, setEditingClubId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editLogoUrl, setEditLogoUrl] = useState("");
   const [organizerEmailByClub, setOrganizerEmailByClub] = useState<
     Record<string, string>
   >({});
@@ -82,16 +90,52 @@ function ClubsPanel() {
   );
   const actionError =
     createState.error ||
+    updateState.error ||
     deleteState.error ||
     addState.error ||
     removeState.error;
 
+  function startEdit(club: ClubItem) {
+    setEditingClubId(club.id);
+    setEditName(club.name);
+    setEditDescription(club.description);
+    setEditLogoUrl(club.logoUrl ?? "");
+  }
+
+  function cancelEdit() {
+    setEditingClubId(null);
+    setEditName("");
+    setEditDescription("");
+    setEditLogoUrl("");
+  }
+
   async function onCreate(event: FormEvent) {
     event.preventDefault();
     try {
-      await createClub({ name, description }).unwrap();
+      await createClub({
+        name,
+        description,
+        logoUrl: logoUrl.trim() || undefined,
+      }).unwrap();
       setName("");
       setDescription("");
+      setLogoUrl("");
+    } catch {
+      // shown below
+    }
+  }
+
+  async function onUpdate(event: FormEvent) {
+    event.preventDefault();
+    if (!editingClubId) return;
+    try {
+      await updateClub({
+        id: editingClubId,
+        name: editName.trim(),
+        description: editDescription.trim(),
+        logoUrl: editLogoUrl.trim(),
+      }).unwrap();
+      cancelEdit();
     } catch {
       // shown below
     }
@@ -113,13 +157,32 @@ function ClubsPanel() {
           </label>
           <label className="grid gap-1.5 text-sm font-semibold">
             Description
-            <input
-              className={inputClass}
+            <textarea
+              className={`${inputClass} min-h-24 py-2`}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
             />
           </label>
+          <label className="grid gap-1.5 text-sm font-semibold">
+            Club photo URL <span className="font-normal text-muted">(optional)</span>
+            <input
+              className={inputClass}
+              type="url"
+              placeholder="https://example.com/club-logo.jpg"
+              value={logoUrl}
+              onChange={(e) => setLogoUrl(e.target.value)}
+            />
+          </label>
+          {logoUrl.trim() ? (
+            <div className="overflow-hidden rounded-[10px] border border-line">
+              <img
+                src={logoUrl.trim()}
+                alt="Club photo preview"
+                className="h-36 w-full object-cover"
+              />
+            </div>
+          ) : null}
           <button
             className={`${btnPrimary} w-fit`}
             type="submit"
@@ -140,122 +203,206 @@ function ClubsPanel() {
           <p className="text-muted">No clubs yet. Create one above.</p>
         ) : (
           <ul className="m-0 list-none space-y-4 p-0">
-            {clubs.map((club) => (
-              <li
-                key={club.id}
-                className="rounded-[12px] border border-line bg-surface p-5"
-              >
-                <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h3 className="m-0 text-lg font-semibold">{club.name}</h3>
-                    <p className="mt-1 mb-0 text-sm text-muted">
-                      {club.description}
+            {clubs.map((club) => {
+              const isEditing = editingClubId === club.id;
+              return (
+                <li
+                  key={club.id}
+                  className="rounded-[12px] border border-line bg-surface p-5"
+                >
+                  {isEditing ? (
+                    <form className="mb-4 grid gap-3" onSubmit={onUpdate}>
+                      <h3 className="font-display m-0 text-lg">Edit club</h3>
+                      <label className="grid gap-1.5 text-sm font-semibold">
+                        Name
+                        <input
+                          className={inputClass}
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          required
+                        />
+                      </label>
+                      <label className="grid gap-1.5 text-sm font-semibold">
+                        Description
+                        <textarea
+                          className={`${inputClass} min-h-24 py-2`}
+                          value={editDescription}
+                          onChange={(e) => setEditDescription(e.target.value)}
+                          required
+                        />
+                      </label>
+                      <label className="grid gap-1.5 text-sm font-semibold">
+                        Club photo URL{" "}
+                        <span className="font-normal text-muted">(optional)</span>
+                        <input
+                          className={inputClass}
+                          type="url"
+                          placeholder="https://example.com/club-logo.jpg"
+                          value={editLogoUrl}
+                          onChange={(e) => setEditLogoUrl(e.target.value)}
+                        />
+                      </label>
+                      {editLogoUrl.trim() ? (
+                        <div className="overflow-hidden rounded-[10px] border border-line">
+                          <img
+                            src={editLogoUrl.trim()}
+                            alt="Club photo preview"
+                            className="h-36 w-full object-cover"
+                          />
+                        </div>
+                      ) : null}
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          className={btnPrimary}
+                          type="submit"
+                          disabled={updateState.isLoading}
+                        >
+                          {updateState.isLoading ? "Saving…" : "Save changes"}
+                        </button>
+                        <button
+                          className={btnOutline}
+                          type="button"
+                          onClick={cancelEdit}
+                          disabled={updateState.isLoading}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex min-w-0 flex-1 gap-3">
+                        {club.logoUrl ? (
+                          <img
+                            src={club.logoUrl}
+                            alt=""
+                            className="h-14 w-14 shrink-0 rounded-lg object-cover"
+                          />
+                        ) : null}
+                        <div className="min-w-0">
+                          <h3 className="m-0 text-lg font-semibold">
+                            {club.name}
+                          </h3>
+                          <p className="mt-1 mb-0 text-sm text-muted">
+                            {club.description}
+                          </p>
+                          <p className="mt-2 mb-0 text-xs text-muted">
+                            Organizers: {club.organizerIds.length} · Members:{" "}
+                            {club.memberIds.length}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className={btnOutline}
+                          onClick={() => startEdit(club)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className={btnOutline}
+                          disabled={deleteState.isLoading}
+                          onClick={() => {
+                            if (confirm(`Delete club “${club.name}”?`)) {
+                              void deleteClub(club.id);
+                            }
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {club.organizerIds.length > 0 ? (
+                    <ul className="mb-4 list-none space-y-2 p-0">
+                      {club.organizerIds.map((organizerId) => {
+                        const organizer = usersById.get(String(organizerId));
+                        return (
+                          <li
+                            key={organizerId}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-bg px-3 py-2 text-sm"
+                          >
+                            <span>
+                              {organizer ? (
+                                <>
+                                  <strong>{organizer.name}</strong>
+                                  <span className="text-muted">
+                                    {" "}
+                                    · {organizer.email}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="font-mono text-xs text-muted">
+                                  {organizerId}
+                                </span>
+                              )}
+                            </span>
+                            <button
+                              type="button"
+                              className="border-0 bg-transparent p-0 text-sm font-semibold text-danger cursor-pointer"
+                              onClick={() =>
+                                void removeOrganizer({
+                                  clubId: club.id,
+                                  userId: organizerId,
+                                })
+                              }
+                            >
+                              Remove
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="mb-4 text-sm text-muted">
+                      No organizers assigned yet.
                     </p>
-                    <p className="mt-2 mb-0 text-xs text-muted">
-                      Organizers: {club.organizerIds.length} · Members:{" "}
-                      {club.memberIds.length}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className={btnOutline}
-                    disabled={deleteState.isLoading}
-                    onClick={() => {
-                      if (confirm(`Delete club “${club.name}”?`)) {
-                        void deleteClub(club.id);
-                      }
+                  )}
+
+                  <form
+                    className="flex flex-col gap-2 sm:flex-row"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const email = (organizerEmailByClub[club.id] ?? "").trim();
+                      if (!email) return;
+                      void addOrganizer({ clubId: club.id, email })
+                        .unwrap()
+                        .then(() =>
+                          setOrganizerEmailByClub((prev) => ({
+                            ...prev,
+                            [club.id]: "",
+                          }))
+                        )
+                        .catch(() => undefined);
                     }}
                   >
-                    Delete
-                  </button>
-                </div>
-
-                {club.organizerIds.length > 0 ? (
-                  <ul className="mb-4 list-none space-y-2 p-0">
-                    {club.organizerIds.map((organizerId) => {
-                      const organizer = usersById.get(String(organizerId));
-                      return (
-                        <li
-                          key={organizerId}
-                          className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-bg px-3 py-2 text-sm"
-                        >
-                          <span>
-                            {organizer ? (
-                              <>
-                                <strong>{organizer.name}</strong>
-                                <span className="text-muted">
-                                  {" "}
-                                  · {organizer.email}
-                                </span>
-                              </>
-                            ) : (
-                              <span className="font-mono text-xs text-muted">
-                                {organizerId}
-                              </span>
-                            )}
-                          </span>
-                          <button
-                            type="button"
-                            className="border-0 bg-transparent p-0 text-sm font-semibold text-danger cursor-pointer"
-                            onClick={() =>
-                              void removeOrganizer({
-                                clubId: club.id,
-                                userId: organizerId,
-                              })
-                            }
-                          >
-                            Remove
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p className="mb-4 text-sm text-muted">
-                    No organizers assigned yet.
-                  </p>
-                )}
-
-                <form
-                  className="flex flex-col gap-2 sm:flex-row"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    const email = (organizerEmailByClub[club.id] ?? "").trim();
-                    if (!email) return;
-                    void addOrganizer({ clubId: club.id, email })
-                      .unwrap()
-                      .then(() =>
+                    <input
+                      className={`${inputClass} sm:flex-1`}
+                      type="email"
+                      placeholder="Organizer email"
+                      value={organizerEmailByClub[club.id] ?? ""}
+                      onChange={(e) =>
                         setOrganizerEmailByClub((prev) => ({
                           ...prev,
-                          [club.id]: "",
+                          [club.id]: e.target.value,
                         }))
-                      )
-                      .catch(() => undefined);
-                  }}
-                >
-                  <input
-                    className={`${inputClass} sm:flex-1`}
-                    type="email"
-                    placeholder="Organizer email"
-                    value={organizerEmailByClub[club.id] ?? ""}
-                    onChange={(e) =>
-                      setOrganizerEmailByClub((prev) => ({
-                        ...prev,
-                        [club.id]: e.target.value,
-                      }))
-                    }
-                    required
-                  />
-                  <button
-                    className={btnPrimary}
-                    type="submit"
-                    disabled={addState.isLoading}
-                  >
-                    Assign organizer
-                  </button>
-                </form>
-              </li>
-            ))}
+                      }
+                      required
+                    />
+                    <button
+                      className={btnPrimary}
+                      type="submit"
+                      disabled={addState.isLoading}
+                    >
+                      Assign organizer
+                    </button>
+                  </form>
+                </li>
+              );
+            })}
           </ul>
         )}
 
@@ -369,22 +516,16 @@ function UsersPanel() {
                     >
                       Assign as organiser
                     </button>
-                    <button
-                      type="button"
-                      className={btnOutline}
-                      disabled={updateState.isLoading || user.role === "student"}
-                      onClick={() => void setRole(user.id, "student")}
-                    >
-                      Make student
-                    </button>
-                    <button
-                      type="button"
-                      className={btnOutline}
-                      disabled={updateState.isLoading || user.role === "admin"}
-                      onClick={() => void setRole(user.id, "admin")}
-                    >
-                      Make admin
-                    </button>
+                    {user.role !== "student" && user.role !== "admin" ? (
+                      <button
+                        type="button"
+                        className={btnOutline}
+                        disabled={updateState.isLoading}
+                        onClick={() => void setRole(user.id, "student")}
+                      >
+                        Make student
+                      </button>
+                    ) : null}
                   </div>
                 </div>
 

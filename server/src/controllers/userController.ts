@@ -46,15 +46,27 @@ export async function updateUserRole(req: Request, res: Response) {
       return res.status(400).json({ message: "Invalid role" });
     }
 
-    if (req.user!.id === id && role !== "admin") {
+    if (role === "admin") {
+      return res.status(403).json({
+        message: "Cannot promote users to admin. Campus Connect has a single admin.",
+      });
+    }
+
+    if (req.user!.id === id) {
       return res.status(400).json({
-        message: "You cannot remove your own admin role",
+        message: "You cannot change your own role",
       });
     }
 
     const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.role === "admin") {
+      return res.status(403).json({
+        message: "Cannot change the admin account role",
+      });
     }
 
     user.role = role;

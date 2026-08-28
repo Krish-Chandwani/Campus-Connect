@@ -37,6 +37,17 @@ export const clubsApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: [{ type: "Club", id: "LIST" }],
     }),
+    updateClub: builder.mutation<
+      ClubResponse,
+      { id: string; name?: string; description?: string; logoUrl?: string }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/clubs/${id}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: [{ type: "Club", id: "LIST" }],
+    }),
     deleteClub: builder.mutation<{ message: string }, string>({
       query: (id) => ({
         url: `/clubs/${id}`,
@@ -74,6 +85,7 @@ export const clubsApi = apiSlice.injectEndpoints({
 export const {
   useListClubsQuery,
   useCreateClubMutation,
+  useUpdateClubMutation,
   useDeleteClubMutation,
   useAddClubOrganizerMutation,
   useRemoveClubOrganizerMutation,
