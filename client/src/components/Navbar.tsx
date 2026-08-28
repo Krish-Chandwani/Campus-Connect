@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { logout } from "../features/auth/authSlice";
+import { useListClubsQuery } from "../features/clubs/clubsApi";
 
 type NavbarProps = {
   variant?: "frost" | "solid";
@@ -16,11 +17,22 @@ const links = [
 export default function Navbar({ variant = "solid" }: NavbarProps) {
   const dispatch = useAppDispatch();
   const { token, user } = useAppSelector((state) => state.auth);
+  const { data: clubsData } = useListClubsQuery(undefined, { skip: !token });
 
-  const navLinks =
-    user?.role === "admin"
-      ? [...links, { to: "/admin", label: "Admin" }]
-      : links;
+  const canManageEvents =
+    user?.role === "admin" ||
+    Boolean(
+      user &&
+        clubsData?.clubs.some((club) =>
+          club.organizerIds.some((id) => String(id) === user.id)
+        )
+    );
+
+  const navLinks = [
+    ...links,
+    ...(canManageEvents ? [{ to: "/manage", label: "Manage" }] : []),
+    ...(user?.role === "admin" ? [{ to: "/admin", label: "Admin" }] : []),
+  ];
 
   const headerClass =
     variant === "frost"

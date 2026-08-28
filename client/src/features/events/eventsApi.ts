@@ -51,6 +51,28 @@ export type ListEventsParams = {
   status?: string;
 };
 
+export type CreateEventBody = {
+  title: string;
+  description: string;
+  venue: string;
+  clubId: string;
+  capacity: number;
+  startAt: string;
+  endAt: string;
+  coverImage?: string;
+};
+
+export type UpdateEventBody = Partial<{
+  title: string;
+  description: string;
+  venue: string;
+  capacity: number;
+  startAt: string;
+  endAt: string;
+  coverImage: string;
+  status: EventItem["status"];
+}>;
+
 export const eventsApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     listEvents: builder.query<ListEventsResponse, ListEventsParams | void>({
@@ -78,6 +100,38 @@ export const eventsApi = apiSlice.injectEndpoints({
     getEvent: builder.query<GetEventResponse, string>({
       query: (id) => `/events/${id}`,
       providesTags: (_result, _error, id) => [{ type: "Event", id }],
+    }),
+
+    createEvent: builder.mutation<GetEventResponse, CreateEventBody>({
+      query: (body) => ({
+        url: "/events",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [{ type: "Event", id: "LIST" }],
+    }),
+
+    updateEvent: builder.mutation<
+      GetEventResponse,
+      { eventId: string; body: UpdateEventBody }
+    >({
+      query: ({ eventId, body }) => ({
+        url: `/events/${eventId}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "Event", id: eventId },
+        { type: "Event", id: "LIST" },
+      ],
+    }),
+
+    deleteEvent: builder.mutation<{ message: string }, string>({
+      query: (eventId) => ({
+        url: `/events/${eventId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: [{ type: "Event", id: "LIST" }],
     }),
 
     createRsvp: builder.mutation<RsvpResponse, string>({
@@ -115,6 +169,9 @@ export const eventsApi = apiSlice.injectEndpoints({
 export const {
   useListEventsQuery,
   useGetEventQuery,
+  useCreateEventMutation,
+  useUpdateEventMutation,
+  useDeleteEventMutation,
   useCreateRsvpMutation,
   useCancelRsvpMutation,
   useListMyEventsQuery,

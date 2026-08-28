@@ -1,10 +1,11 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import ComingSoonPage from "./pages/ComingSoonPage";
 import AdminPage from "./pages/AdminPage";
+import ComingSoonPage from "./pages/ComingSoonPage";
 import EventDetailPage from "./pages/EventDetailPage";
 import EventsPage from "./pages/EventsPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
+import ManageEventsPage from "./pages/ManageEventsPage";
 import RegisterPage from "./pages/RegisterPage";
 
 export default function App() {
@@ -15,6 +16,7 @@ export default function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/events" element={<EventsPage />} />
       <Route path="/events/:id" element={<EventDetailPage />} />
+      <Route path="/manage" element={<ManageEventsPage />} />
       <Route path="/admin" element={<AdminPage />} />
       <Route
         path="/clubs"

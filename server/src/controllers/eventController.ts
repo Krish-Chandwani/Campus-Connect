@@ -52,7 +52,14 @@ export async function listEvents(req: Request, res: Response) {
         await Club.findOne({ organizerIds: req.user!.id }).select("_id").lean()
       );
 
-    if (statusQuery) {
+    if (statusQuery === "all") {
+      if (!canSeeDrafts) {
+        return res
+          .status(403)
+          .json({ message: "Only organizers can list all event statuses" });
+      }
+      // no status filter — all statuses for managed views
+    } else if (statusQuery) {
       if (!isEventStatus(statusQuery)) {
         return res.status(400).json({ message: "Invalid status" });
       }
