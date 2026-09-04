@@ -1,12 +1,16 @@
 import { Router } from "express";
 import {
   addClubOrganizer,
+  approveJoinRequest,
+  cancelJoinRequest,
   createClub,
   deleteClub,
   getClub,
   joinClub,
   leaveClub,
   listClubs,
+  listJoinRequests,
+  rejectJoinRequest,
   removeClubOrganizer,
   updateClub,
 } from "../controllers/clubController";
@@ -38,6 +42,19 @@ router.patch("/:id", requireClubOrganizer, updateClub);
 router.delete("/:id", requireRole("admin"), requireClubOrganizer, deleteClub);
 
 router.post("/:id/join", joinClub);
+router.delete("/:id/join", cancelJoinRequest);
 router.delete("/:id/leave", leaveClub);
+
+router.get("/:id/join-requests", requireClubOrganizer, listJoinRequests);
+router.post(
+  "/:id/join-requests/:userId/approve",
+  requireClubOrganizer,
+  approveJoinRequest
+);
+router.delete(
+  "/:id/join-requests/:userId",
+  requireClubOrganizer,
+  rejectJoinRequest
+);
 
 export default router;

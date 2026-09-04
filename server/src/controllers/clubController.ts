@@ -65,6 +65,7 @@ export async function createClub(req: Request, res: Response) {
       createdBy: req.user!.id,
       organizerIds: [],
       memberIds: [],
+      pendingMemberIds: [],
     });
 
     return res.status(201).json({ club: toPublicClub(club) });
@@ -138,18 +139,64 @@ export async function joinClub(req: Request, res: Response) {
     }
 
     const userId = req.user!.id;
-    const alreadyMember = club.memberIds.some((memberId) => memberId.equals(userId));
+    const alreadyMember = club.memberIds.some((memberId) =>
+      memberId.equals(userId)
+    );
     if (alreadyMember) {
       return res.status(409).json({ message: "Already a member of this club" });
     }
 
-    club.memberIds.push(userId);
+    const alreadyPending = (club.pendingMemberIds ?? []).some((memberId) =>
+      memberId.equals(userId)
+    );
+    if (alreadyPending) {
+      return res
+        .status(409)
+        .json({ message: "Join request already pending for this club" });
+    }
+
+    club.pendingMemberIds = club.pendingMemberIds ?? [];
+    club.pendingMemberIds.push(userId);
     await club.save();
 
     return res.json({ club: toPublicClub(club) });
   } catch (error) {
-    console.error("Join club failed:", error);
-    return res.status(500).json({ message: "Could not join club" });
+    console.error("Join club request failed:", error);
+    return res.status(500).json({ message: "Could not request to join club" });
+  }
+}
+
+export async function cancelJoinRequest(req: Request, res: Response) {
+  try {
+    const id = parseClubId(req.params.id);
+    if (!id) {
+      return res.status(400).json({ message: "Invalid club id" });
+    }
+
+    const club = await Club.findById(id);
+    if (!club) {
+      return res.status(404).json({ message: "Club not found" });
+    }
+
+    const userId = req.user!.id;
+    const isPending = (club.pendingMemberIds ?? []).some((memberId) =>
+      memberId.equals(userId)
+    );
+    if (!isPending) {
+      return res
+        .status(400)
+        .json({ message: "You do not have a pending join request" });
+    }
+
+    club.pendingMemberIds = (club.pendingMemberIds ?? []).filter(
+      (memberId) => !memberId.equals(userId)
+    );
+    await club.save();
+
+    return res.json({ club: toPublicClub(club) });
+  } catch (error) {
+    console.error("Cancel join request failed:", error);
+    return res.status(500).json({ message: "Could not cancel join request" });
   }
 }
 
@@ -178,6 +225,94 @@ export async function leaveClub(req: Request, res: Response) {
   } catch (error) {
     console.error("Leave club failed:", error);
     return res.status(500).json({ message: "Could not leave club" });
+  }
+}
+
+export async function listJoinRequests(req: Request, res: Response) {
+  try {
+    const club = req.club!;
+    const pendingIds = club.pendingMemberIds ?? [];
+    if (pendingIds.length === 0) {
+      return res.json({ requests: [] });
+    }
+
+    const users = await User.find({ _id: { $in: pendingIds } });
+    const byId = new Map(users.map((user) => [user.id, user]));
+
+    const requests = pendingIds
+      .map((pendingId) => {
+        const user = byId.get(String(pendingId));
+        if (!user) return null;
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          department: user.department,
+        };
+      })
+      .filter(Boolean);
+
+    return res.json({ requests });
+  } catch (error) {
+    console.error("List join requests failed:", error);
+    return res.status(500).json({ message: "Could not load join requests" });
+  }
+}
+
+export async function approveJoinRequest(req: Request, res: Response) {
+  try {
+    const club = req.club!;
+    const userId = req.params.userId;
+    if (!userId || !mongoose.isValidObjectId(userId)) {
+      return res.status(400).json({ message: "Invalid user id" });
+    }
+
+    const isPending = (club.pendingMemberIds ?? []).some((id) =>
+      id.equals(userId)
+    );
+    if (!isPending) {
+      return res.status(404).json({ message: "Join request not found" });
+    }
+
+    club.pendingMemberIds = (club.pendingMemberIds ?? []).filter(
+      (id) => !id.equals(userId)
+    );
+    if (!club.memberIds.some((id) => id.equals(userId))) {
+      club.memberIds.push(userId);
+    }
+    await club.save();
+
+    return res.json({ club: toPublicClub(club) });
+  } catch (error) {
+    console.error("Approve join request failed:", error);
+    return res.status(500).json({ message: "Could not approve join request" });
+  }
+}
+
+export async function rejectJoinRequest(req: Request, res: Response) {
+  try {
+    const club = req.club!;
+    const userId = req.params.userId;
+    if (!userId || !mongoose.isValidObjectId(userId)) {
+      return res.status(400).json({ message: "Invalid user id" });
+    }
+
+    const isPending = (club.pendingMemberIds ?? []).some((id) =>
+      id.equals(userId)
+    );
+    if (!isPending) {
+      return res.status(404).json({ message: "Join request not found" });
+    }
+
+    club.pendingMemberIds = (club.pendingMemberIds ?? []).filter(
+      (id) => !id.equals(userId)
+    );
+    await club.save();
+
+    return res.json({ club: toPublicClub(club) });
+  } catch (error) {
+    console.error("Reject join request failed:", error);
+    return res.status(500).json({ message: "Could not reject join request" });
   }
 }
 
@@ -215,6 +350,9 @@ export async function addClubOrganizer(req: Request, res: Response) {
     if (!club.memberIds.some((id) => id.equals(user.id))) {
       club.memberIds.push(user.id);
     }
+    club.pendingMemberIds = (club.pendingMemberIds ?? []).filter(
+      (id) => !id.equals(user.id)
+    );
     await club.save();
 
     return res.json({

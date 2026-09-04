@@ -1,5 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import AdminPage from "./pages/AdminPage";
+import ClubDetailPage from "./pages/ClubDetailPage";
+import ClubsPage from "./pages/ClubsPage";
 import ComingSoonPage from "./pages/ComingSoonPage";
 import EventDetailPage from "./pages/EventDetailPage";
 import EventsPage from "./pages/EventsPage";
@@ -16,17 +18,10 @@ export default function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/events" element={<EventsPage />} />
       <Route path="/events/:id" element={<EventDetailPage />} />
+      <Route path="/clubs" element={<ClubsPage />} />
+      <Route path="/clubs/:id" element={<ClubDetailPage />} />
       <Route path="/manage" element={<ManageEventsPage />} />
       <Route path="/admin" element={<AdminPage />} />
-      <Route
-        path="/clubs"
-        element={
-          <ComingSoonPage
-            title="Clubs"
-            description="Club directory will be implemented in a later step."
-          />
-        }
-      />
       <Route
         path="/announcements"
         element={
