@@ -19,6 +19,22 @@ function isAudience(value: string): value is AnnouncementAudience {
   return (ANNOUNCEMENT_AUDIENCES as readonly string[]).includes(value);
 }
 
+const TITLE_MAX = 120;
+const BODY_MAX = 5000;
+
+function validateAnnouncementText(title: string, body: string) {
+  if (!title || !body) {
+    return "Title and body are required";
+  }
+  if (title.length > TITLE_MAX) {
+    return `Title must be ${TITLE_MAX} characters or fewer`;
+  }
+  if (body.length > BODY_MAX) {
+    return `Body must be ${BODY_MAX} characters or fewer`;
+  }
+  return null;
+}
+
 async function userCanPostForClub(userId: string, clubId: string, role: string) {
   if (role === "admin") {
     return true;
@@ -56,6 +72,22 @@ export async function listAnnouncements(req: Request, res: Response) {
       filter.clubId = clubId;
     }
 
+    // Non-admins only see campus-wide notices + notices for clubs they belong to / organize
+    if (req.user!.role !== "admin") {
+      const relatedClubs = await Club.find({
+        $or: [
+          { memberIds: req.user!.id },
+          { organizerIds: req.user!.id },
+        ],
+      }).select("_id");
+
+      const clubIds = relatedClubs.map((club) => club._id);
+      filter.$or = [
+        { audience: "all" },
+        { audience: "club", clubId: { $in: clubIds } },
+      ];
+    }
+
     const announcements = await Announcement.find(filter).sort({
       pinned: -1,
       createdAt: -1,
@@ -82,6 +114,27 @@ export async function getAnnouncement(req: Request, res: Response) {
       return res.status(404).json({ message: "Announcement not found" });
     }
 
+    if (req.user!.role !== "admin" && announcement.audience === "club") {
+      if (!announcement.clubId) {
+        return res.status(404).json({ message: "Announcement not found" });
+      }
+
+      const club = await Club.findById(announcement.clubId);
+      if (!club) {
+        return res.status(404).json({ message: "Announcement not found" });
+      }
+
+      const allowed =
+        club.memberIds.some((memberId) => memberId.equals(req.user!.id)) ||
+        club.organizerIds.some((organizerId) =>
+          organizerId.equals(req.user!.id)
+        );
+
+      if (!allowed) {
+        return res.status(403).json({ message: "You cannot view this notice" });
+      }
+    }
+
     return res.json({ announcement: toPublicAnnouncement(announcement) });
   } catch (error) {
     console.error("Get announcement failed:", error);
@@ -97,8 +150,9 @@ export async function createAnnouncement(req: Request, res: Response) {
     const pinned = Boolean(req.body.pinned);
     const clubIdRaw = req.body.clubId ? String(req.body.clubId).trim() : "";
 
-    if (!title || !body) {
-      return res.status(400).json({ message: "Title and body are required" });
+    const textError = validateAnnouncementText(title, body);
+    if (textError) {
+      return res.status(400).json({ message: textError });
     }
 
     if (!isAudience(audienceRaw)) {
@@ -174,6 +228,11 @@ export async function updateAnnouncement(req: Request, res: Response) {
       if (!title) {
         return res.status(400).json({ message: "Title cannot be empty" });
       }
+      if (title.length > TITLE_MAX) {
+        return res.status(400).json({
+          message: `Title must be ${TITLE_MAX} characters or fewer`,
+        });
+      }
       announcement.title = title;
     }
 
@@ -181,6 +240,11 @@ export async function updateAnnouncement(req: Request, res: Response) {
       const body = String(req.body.body).trim();
       if (!body) {
         return res.status(400).json({ message: "Body cannot be empty" });
+      }
+      if (body.length > BODY_MAX) {
+        return res.status(400).json({
+          message: `Body must be ${BODY_MAX} characters or fewer`,
+        });
       }
       announcement.body = body;
     }

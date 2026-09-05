@@ -1,5 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import AdminPage from "./pages/AdminPage";
+import AnnouncementDetailPage from "./pages/AnnouncementDetailPage";
+import AnnouncementsPage from "./pages/AnnouncementsPage";
 import ClubDetailPage from "./pages/ClubDetailPage";
 import ClubsPage from "./pages/ClubsPage";
 import ComingSoonPage from "./pages/ComingSoonPage";
@@ -20,17 +22,10 @@ export default function App() {
       <Route path="/events/:id" element={<EventDetailPage />} />
       <Route path="/clubs" element={<ClubsPage />} />
       <Route path="/clubs/:id" element={<ClubDetailPage />} />
+      <Route path="/announcements" element={<AnnouncementsPage />} />
+      <Route path="/announcements/:id" element={<AnnouncementDetailPage />} />
       <Route path="/manage" element={<ManageEventsPage />} />
       <Route path="/admin" element={<AdminPage />} />
-      <Route
-        path="/announcements"
-        element={
-          <ComingSoonPage
-            title="Notices"
-            description="Announcements feed will be implemented in a later step."
-          />
-        }
-      />
       <Route
         path="/profile"
         element={
