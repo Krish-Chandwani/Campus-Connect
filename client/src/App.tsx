@@ -4,12 +4,12 @@ import AnnouncementDetailPage from "./pages/AnnouncementDetailPage";
 import AnnouncementsPage from "./pages/AnnouncementsPage";
 import ClubDetailPage from "./pages/ClubDetailPage";
 import ClubsPage from "./pages/ClubsPage";
-import ComingSoonPage from "./pages/ComingSoonPage";
 import EventDetailPage from "./pages/EventDetailPage";
 import EventsPage from "./pages/EventsPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import ManageEventsPage from "./pages/ManageEventsPage";
+import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPage";
 
 export default function App() {
@@ -26,15 +26,7 @@ export default function App() {
       <Route path="/announcements/:id" element={<AnnouncementDetailPage />} />
       <Route path="/manage" element={<ManageEventsPage />} />
       <Route path="/admin" element={<AdminPage />} />
-      <Route
-        path="/profile"
-        element={
-          <ComingSoonPage
-            title="Profile"
-            description="Your RSVPs and attendance will land here later."
-          />
-        }
-      />
+      <Route path="/profile" element={<ProfilePage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
