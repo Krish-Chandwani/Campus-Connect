@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import mongoose from "mongoose";
+import { Club } from "../models/Club";
 import { Attendance, toPublicAttendance } from "../models/Attendance";
 import { Event, toPublicEvent, type IEvent } from "../models/Event";
 import { Rsvp } from "../models/Rsvp";
@@ -11,9 +12,37 @@ function parseEventId(id: string | undefined) {
   return id;
 }
 
+function extractCheckInToken(raw: unknown) {
+  const value = String(raw ?? "").trim();
+  if (!value) {
+    return "";
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed && typeof parsed === "object") {
+      if (typeof parsed.token === "string") return parsed.token.trim();
+      if (typeof parsed.checkInToken === "string") return parsed.checkInToken.trim();
+      if (typeof parsed.qrValue === "string") return extractCheckInToken(parsed.qrValue);
+      if (typeof parsed.qrPayload === "object" && parsed.qrPayload) {
+        return extractCheckInToken((parsed.qrPayload as { token?: string }).token ?? "");
+      }
+    }
+  } catch {
+    // fall back to raw value below
+  }
+
+  return value;
+}
+
 export async function getCheckInQr(req: Request, res: Response) {
   try {
-    const event = await Event.findById(req.event!.id).select("+checkInToken");
+    const eventId = parseEventId(req.params.id);
+    if (!eventId) {
+      return res.status(400).json({ message: "Invalid event id" });
+    }
+
+    const event = await Event.findById(eventId).select("+checkInToken");
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
     }
@@ -28,6 +57,24 @@ export async function getCheckInQr(req: Request, res: Response) {
       return res
         .status(400)
         .json({ message: "Event must be published for check-in" });
+    }
+
+    const userId = req.user!.id;
+    const club = await Club.findById(event.clubId);
+    const isEventOrganizer =
+      req.user!.role === "admin" ||
+      club?.organizerIds.some((organizerId) => organizerId.equals(userId)) ||
+      false;
+    const hasActiveRsvp = await Rsvp.exists({
+      eventId: event.id,
+      userId,
+      status: "going",
+    });
+
+    if (!isEventOrganizer && !hasActiveRsvp) {
+      return res.status(403).json({
+        message: "You must RSVP to this event to view the QR code",
+      });
     }
 
     const payload = {
@@ -53,7 +100,7 @@ export async function checkIn(req: Request, res: Response) {
       return res.status(400).json({ message: "Invalid event id" });
     }
 
-    const token = String(req.body.token ?? "").trim();
+    const token = extractCheckInToken(req.body.token ?? req.body.qrValue ?? req.body.qr ?? req.body.payload);
     if (!token) {
       return res.status(400).json({ message: "Check-in token is required" });
     }

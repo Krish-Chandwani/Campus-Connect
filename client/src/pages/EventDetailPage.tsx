@@ -1,3 +1,4 @@
+import { QRCodeSVG } from "qrcode.react";
 import { Link, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import RequireAuth from "../components/RequireAuth";
@@ -5,6 +6,7 @@ import getErrorMessage from "../features/auth/getErrorMessage";
 import {
   useCancelRsvpMutation,
   useCreateRsvpMutation,
+  useGetEventCheckInQrQuery,
   useGetEventQuery,
   useListMyEventsQuery,
 } from "../features/events/eventsApi";
@@ -22,13 +24,15 @@ function EventDetailContent() {
   } = useGetEventQuery(id, { skip: !id });
 
   const { data: myEventsData } = useListMyEventsQuery({ status: "going" });
-  const [createRsvp, createState] = useCreateRsvpMutation();
-  const [cancelRsvp, cancelState] = useCancelRsvpMutation();
-
   const event = data?.event;
   const alreadyGoing = Boolean(
     myEventsData?.events.some((item) => item.event.id === id)
   );
+  const { data: qrData, isLoading: qrLoading } = useGetEventCheckInQrQuery(id, {
+    skip: !id || !alreadyGoing,
+  });
+  const [createRsvp, createState] = useCreateRsvpMutation();
+  const [cancelRsvp, cancelState] = useCancelRsvpMutation();
 
   const rsvpBusy = createState.isLoading || cancelState.isLoading;
   const rsvpError = createState.error || cancelState.error;
@@ -59,11 +63,11 @@ function EventDetailContent() {
         </Link>
 
         {isLoading ? (
-          <div className="rounded-[12px] border border-line bg-surface px-5 py-6 text-muted">
+          <div className="rounded-xl border border-line bg-surface px-5 py-6 text-muted">
             Loading event…
           </div>
         ) : isError || !event ? (
-          <div className="rounded-[12px] border border-line bg-surface px-5 py-6 text-muted">
+          <div className="rounded-xl border border-line bg-surface px-5 py-6 text-muted">
             {getErrorMessage(loadError, "Event not found or unavailable.")}
           </div>
         ) : (
@@ -130,6 +134,29 @@ function EventDetailContent() {
               <p className="mt-4 mb-0 text-sm text-danger" role="alert">
                 {getErrorMessage(rsvpError, "Could not update RSVP")}
               </p>
+            ) : null}
+
+            {alreadyGoing ? (
+              <div className="mt-8 rounded-[12px] border border-brand/20 bg-brand-soft/40 p-4 sm:p-5">
+                <h2 className="font-display mt-0 mb-2 text-xl font-bold text-ink">
+                  Event check-in QR
+                </h2>
+                <p className="mt-0 mb-4 text-sm text-muted">
+                  Show this code to the club organizer when you arrive.
+                </p>
+
+                {qrLoading ? (
+                  <p className="m-0 text-sm text-muted">Generating your QR…</p>
+                ) : qrData ? (
+                  <div className="flex flex-col items-center gap-4 rounded-xl bg-white p-4 text-center shadow-sm">
+                    <QRCodeSVG
+                      value={qrData.qrValue}
+                      size={220}
+                      className="h-auto w-full max-w-[220px]"
+                    />
+                  </div>
+                ) : null}
+              </div>
             ) : null}
           </article>
         )}

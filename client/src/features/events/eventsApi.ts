@@ -33,6 +33,15 @@ type GetEventResponse = {
   event: EventItem;
 };
 
+type CheckInQrResponse = {
+  event: EventItem;
+  qrPayload: {
+    eventId: string;
+    token: string;
+  };
+  qrValue: string;
+};
+
 type RsvpResponse = {
   rsvp: RsvpItem;
 };
@@ -99,6 +108,11 @@ export const eventsApi = apiSlice.injectEndpoints({
 
     getEvent: builder.query<GetEventResponse, string>({
       query: (id) => `/events/${id}`,
+      providesTags: (_result, _error, id) => [{ type: "Event", id }],
+    }),
+
+    getEventCheckInQr: builder.query<CheckInQrResponse, string>({
+      query: (id) => `/events/${id}/check-in-qr`,
       providesTags: (_result, _error, id) => [{ type: "Event", id }],
     }),
 
@@ -169,6 +183,7 @@ export const eventsApi = apiSlice.injectEndpoints({
 export const {
   useListEventsQuery,
   useGetEventQuery,
+  useGetEventCheckInQrQuery,
   useCreateEventMutation,
   useUpdateEventMutation,
   useDeleteEventMutation,

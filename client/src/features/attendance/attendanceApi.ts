@@ -18,13 +18,29 @@ type MyAttendanceResponse = {
   }>;
 };
 
+type CheckInResponse = {
+  attendance: AttendanceItem;
+};
+
 export const attendanceApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     listMyAttendance: builder.query<MyAttendanceResponse, void>({
       query: () => "/users/me/attendance",
       providesTags: [{ type: "Attendance", id: "MINE" }],
     }),
+
+    checkInEvent: builder.mutation<CheckInResponse, { eventId: string; token: string }>({
+      query: ({ eventId, token }) => ({
+        url: `/events/${eventId}/check-in`,
+        method: "POST",
+        body: { token },
+      }),
+      invalidatesTags: (_result, _error, { eventId }) => [
+        { type: "Attendance", id: "MINE" },
+        { type: "Event", id: eventId },
+      ],
+    }),
   }),
 });
 
-export const { useListMyAttendanceQuery } = attendanceApi;
+export const { useListMyAttendanceQuery, useCheckInEventMutation } = attendanceApi;

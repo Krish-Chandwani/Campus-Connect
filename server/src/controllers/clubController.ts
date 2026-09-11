@@ -156,7 +156,7 @@ export async function joinClub(req: Request, res: Response) {
     }
 
     club.pendingMemberIds = club.pendingMemberIds ?? [];
-    club.pendingMemberIds.push(userId);
+    club.pendingMemberIds.push(new mongoose.Types.ObjectId(userId));
     await club.save();
 
     return res.json({ club: toPublicClub(club) });
@@ -278,7 +278,7 @@ export async function approveJoinRequest(req: Request, res: Response) {
       (id) => !id.equals(userId)
     );
     if (!club.memberIds.some((id) => id.equals(userId))) {
-      club.memberIds.push(userId);
+      club.memberIds.push(new mongoose.Types.ObjectId(userId));
     }
     await club.save();
 
@@ -346,9 +346,9 @@ export async function addClubOrganizer(req: Request, res: Response) {
         .json({ message: "User is already an organizer of this club" });
     }
 
-    club.organizerIds.push(user.id);
+    club.organizerIds.push(new mongoose.Types.ObjectId(user.id));
     if (!club.memberIds.some((id) => id.equals(user.id))) {
-      club.memberIds.push(user.id);
+      club.memberIds.push(new mongoose.Types.ObjectId(user.id));
     }
     club.pendingMemberIds = (club.pendingMemberIds ?? []).filter(
       (id) => !id.equals(user.id)

@@ -4,6 +4,7 @@ import { useAppSelector } from "../app/hooks";
 import Navbar from "../components/Navbar";
 import RequireAuth from "../components/RequireAuth";
 import getErrorMessage from "../features/auth/getErrorMessage";
+import { useCheckInEventMutation } from "../features/attendance/attendanceApi";
 import { useListClubsQuery } from "../features/clubs/clubsApi";
 import {
   useCreateEventMutation,
@@ -39,6 +40,7 @@ function ManageEventsContent() {
   const [createEvent, createState] = useCreateEventMutation();
   const [updateEvent, updateState] = useUpdateEventMutation();
   const [deleteEvent, deleteState] = useDeleteEventMutation();
+  const [checkInEvent, checkInState] = useCheckInEventMutation();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -46,6 +48,7 @@ function ManageEventsContent() {
   const [capacity, setCapacity] = useState("50");
   const [startAt, setStartAt] = useState("");
   const [endAt, setEndAt] = useState("");
+  const [manualTokenByEvent, setManualTokenByEvent] = useState<Record<string, string>>({});
 
   const events = eventsData?.events ?? [];
   const clubsById = useMemo(
@@ -87,6 +90,18 @@ function ManageEventsContent() {
         eventId: eventItem.id,
         body: { status },
       }).unwrap();
+    } catch {
+      // shown below
+    }
+  }
+
+  async function onManualCheckIn(eventId: string) {
+    const token = (manualTokenByEvent[eventId] ?? "").trim();
+    if (!token) return;
+
+    try {
+      await checkInEvent({ eventId, token }).unwrap();
+      setManualTokenByEvent((prev) => ({ ...prev, [eventId]: "" }));
     } catch {
       // shown below
     }
@@ -151,7 +166,7 @@ function ManageEventsContent() {
           </select>
         </label>
 
-        <section className="mb-10 rounded-[12px] border border-line bg-surface p-5">
+        <section className="mb-10 rounded-xl border border-line bg-surface p-5">
           <h2 className="font-display m-0 mb-4 text-xl">Create event</h2>
           <form className="grid gap-3" onSubmit={onCreate}>
             <label className="grid gap-1.5 text-sm font-semibold">
@@ -240,7 +255,7 @@ function ManageEventsContent() {
                 return (
                   <li
                     key={eventItem.id}
-                    className="rounded-[12px] border border-line bg-surface p-4"
+                    className="rounded-xl border border-line bg-surface p-4"
                   >
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
@@ -310,6 +325,33 @@ function ManageEventsContent() {
                         </button>
                       </div>
                     </div>
+
+                    {eventItem.status === "published" ? (
+                      <div className="mt-4 rounded-xl border border-line bg-bg p-3">
+                        <label className="mb-2 grid gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+                          Manual check-in
+                          <input
+                            className={`${inputClass} mt-1`}
+                            value={manualTokenByEvent[eventItem.id] ?? ""}
+                            onChange={(e) =>
+                              setManualTokenByEvent((prev) => ({
+                                ...prev,
+                                [eventItem.id]: e.target.value,
+                              }))
+                            }
+                            placeholder="Paste QR value or token"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          className={btnPrimary}
+                          disabled={checkInState.isLoading}
+                          onClick={() => void onManualCheckIn(eventItem.id)}
+                        >
+                          {checkInState.isLoading ? "Checking in…" : "Mark attendance"}
+                        </button>
+                      </div>
+                    ) : null}
                   </li>
                 );
               })}

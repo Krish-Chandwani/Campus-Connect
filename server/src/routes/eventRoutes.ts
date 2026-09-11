@@ -30,7 +30,7 @@ router.post("/:id/rsvp", createRsvp);
 router.delete("/:id/rsvp", cancelRsvp);
 router.get("/:id/attendees", requireEventOrganizer, listEventAttendees);
 
-router.get("/:id/check-in-qr", requireEventOrganizer, getCheckInQr);
+router.get("/:id/check-in-qr", getCheckInQr);
 router.post("/:id/check-in", checkIn);
 router.get("/:id/attendance", requireEventOrganizer, listEventAttendance);
 
