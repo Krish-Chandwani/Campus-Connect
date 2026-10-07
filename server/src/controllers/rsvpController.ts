@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import mongoose from "mongoose";
+import { createNotificationForUser } from "../controllers/notificationController";
 import { Event, toPublicEvent, type IEvent } from "../models/Event";
 import { Rsvp, toPublicRsvp } from "../models/Rsvp";
 
@@ -59,6 +60,15 @@ export async function createRsvp(req: Request, res: Response) {
     } else {
       rsvp = await Rsvp.create({ eventId, userId, status: "going" });
     }
+
+    await createNotificationForUser({
+      recipientId: userId,
+      type: "event_rsvp_confirmed",
+      title: "RSVP confirmed",
+      message: `You are confirmed for ${event.title}.`,
+      relatedEntityId: event.id,
+      relatedEntityType: "event",
+    });
 
     return res.status(201).json({ rsvp: toPublicRsvp(rsvp) });
   } catch (error) {

@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Club, toPublicClub } from "../models/Club";
+import { createNotificationForUser } from "../controllers/notificationController";
 import { User } from "../models/User";
 
 function parseClubId(id: string | undefined) {
@@ -282,6 +283,15 @@ export async function approveJoinRequest(req: Request, res: Response) {
     }
     await club.save();
 
+    await createNotificationForUser({
+      recipientId: userId,
+      type: "club_join_approved",
+      title: "Club request approved",
+      message: `Your request to join ${club.name} has been approved.`,
+      relatedEntityId: club.id,
+      relatedEntityType: "club",
+    });
+
     return res.json({ club: toPublicClub(club) });
   } catch (error) {
     console.error("Approve join request failed:", error);
@@ -308,6 +318,15 @@ export async function rejectJoinRequest(req: Request, res: Response) {
       (id) => !id.equals(userId)
     );
     await club.save();
+
+    await createNotificationForUser({
+      recipientId: userId,
+      type: "club_join_rejected",
+      title: "Club request update",
+      message: `Your request to join ${club.name} was not approved this time.`,
+      relatedEntityId: club.id,
+      relatedEntityType: "club",
+    });
 
     return res.json({ club: toPublicClub(club) });
   } catch (error) {
@@ -354,6 +373,15 @@ export async function addClubOrganizer(req: Request, res: Response) {
       (id) => !id.equals(user.id)
     );
     await club.save();
+
+    await createNotificationForUser({
+      recipientId: user.id,
+      type: "organizer_assigned",
+      title: "You are now an organizer",
+      message: `You were assigned as an organizer for ${club.name}.`,
+      relatedEntityId: club.id,
+      relatedEntityType: "club",
+    });
 
     return res.json({
       club: toPublicClub(club),

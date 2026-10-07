@@ -6,6 +6,7 @@ import announcementRoutes from "./routes/announcementRoutes";
 import authRoutes from "./routes/authRoutes";
 import clubRoutes from "./routes/clubRoutes";
 import eventRoutes from "./routes/eventRoutes";
+import notificationRoutes from "./routes/notificationRoutes";
 import userRoutes from "./routes/userRoutes";
 
 dotenv.config();
@@ -33,6 +34,7 @@ app.use("/api/clubs", clubRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/announcements", announcementRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 async function start() {
   try {

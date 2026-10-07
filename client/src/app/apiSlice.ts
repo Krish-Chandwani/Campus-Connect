@@ -21,6 +21,7 @@ export const apiSlice = createApi({
     "Rsvp",
     "Attendance",
     "Announcement",
+    "Notification",
   ],
   endpoints: () => ({}),
 });

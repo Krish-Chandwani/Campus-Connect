@@ -7,6 +7,8 @@ import {
   type AnnouncementAudience,
 } from "../models/Announcement";
 import { Club } from "../models/Club";
+import { createNotificationsForUsers } from "../controllers/notificationController";
+import { User } from "../models/User";
 
 function parseObjectId(id: string | undefined) {
   if (!id || !mongoose.isValidObjectId(id)) {
@@ -174,6 +176,16 @@ export async function createAnnouncement(req: Request, res: Response) {
         createdBy: req.user!.id,
       });
 
+      const users = await User.find({}, "_id");
+      await createNotificationsForUsers({
+        recipientIds: users.map((user) => user.id),
+        type: "announcement_published",
+        title: "Campus notice",
+        message: title,
+        relatedEntityId: announcement.id,
+        relatedEntityType: "announcement",
+      });
+
       return res
         .status(201)
         .json({ announcement: toPublicAnnouncement(announcement) });
@@ -208,6 +220,24 @@ export async function createAnnouncement(req: Request, res: Response) {
       clubId: clubIdRaw,
       pinned,
       createdBy: req.user!.id,
+    });
+
+    const recipientIds = [
+      ...new Set(
+        [
+          ...club.memberIds.map((memberId) => String(memberId)),
+          ...club.organizerIds.map((organizerId) => String(organizerId)),
+        ]
+      ),
+    ];
+
+    await createNotificationsForUsers({
+      recipientIds,
+      type: "announcement_published",
+      title: `New notice for ${club.name}`,
+      message: title,
+      relatedEntityId: announcement.id,
+      relatedEntityType: "announcement",
     });
 
     return res

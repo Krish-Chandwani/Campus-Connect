@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { logout } from "../features/auth/authSlice";
 import { useListClubsQuery } from "../features/clubs/clubsApi";
+import { useGetUnreadCountQuery } from "../features/notifications/notificationsApi";
 
 type NavbarProps = {
   variant?: "frost" | "solid";
@@ -18,6 +19,7 @@ export default function Navbar({ variant = "solid" }: NavbarProps) {
   const dispatch = useAppDispatch();
   const { token, user } = useAppSelector((state) => state.auth);
   const { data: clubsData } = useListClubsQuery(undefined, { skip: !token });
+  const { data: unreadData } = useGetUnreadCountQuery(undefined, { skip: !token });
 
   const canManageEvents =
     user?.role === "admin" ||
@@ -59,6 +61,22 @@ export default function Navbar({ variant = "solid" }: NavbarProps) {
               </NavLink>
             </li>
           ))}
+          {token && user ? (
+            <li>
+              <NavLink
+                to="/notifications"
+                className="relative inline-flex items-center gap-2 text-[0.95rem] font-medium opacity-90 hover:opacity-100 hover:underline hover:underline-offset-[0.3em]"
+              >
+                <span aria-hidden>🔔</span>
+                <span>Alerts</span>
+                {unreadData && unreadData.count > 0 ? (
+                  <span className="inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[0.7rem] font-bold text-white">
+                    {unreadData.count > 9 ? "9+" : unreadData.count}
+                  </span>
+                ) : null}
+              </NavLink>
+            </li>
+          ) : null}
           <li>
             {token && user ? (
               <button

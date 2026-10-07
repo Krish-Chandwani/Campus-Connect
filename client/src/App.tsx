@@ -9,6 +9,7 @@ import EventsPage from "./pages/EventsPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import ManageEventsPage from "./pages/ManageEventsPage";
+import NotificationsPage from "./pages/NotificationsPage";
 import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPage";
 
@@ -26,6 +27,7 @@ export default function App() {
       <Route path="/announcements/:id" element={<AnnouncementDetailPage />} />
       <Route path="/manage" element={<ManageEventsPage />} />
       <Route path="/admin" element={<AdminPage />} />
+      <Route path="/notifications" element={<NotificationsPage />} />
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
